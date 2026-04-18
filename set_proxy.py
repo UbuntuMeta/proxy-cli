@@ -1,35 +1,38 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import argparse
 import platform
 import json
+from typing import Optional
 
 
 class ProxyConfigStore:
     """Persistently stores named proxy configurations in ~/.proxy_configs.json."""
-    CONFIG_PATH = os.path.expanduser("~/.proxy_configs.json")
+    CONFIG_PATH: str = os.path.expanduser("~/.proxy_configs.json")
 
     @classmethod
-    def _read(cls):
+    def _read(cls) -> dict[str, dict[str, str]]:
         if os.path.exists(cls.CONFIG_PATH):
             with open(cls.CONFIG_PATH) as f:
                 return json.load(f)
         return {}
 
     @classmethod
-    def _write(cls, data):
+    def _write(cls, data: dict[str, dict[str, str]]) -> None:
         with open(cls.CONFIG_PATH, "w") as f:
             json.dump(data, f, indent=2)
 
     @classmethod
-    def save(cls, name, ip, port):
+    def save(cls, name: str, ip: str, port: str) -> None:
         configs = cls._read()
         configs[name] = {"ip": ip, "port": port}
         cls._write(configs)
         print(f"Saved '{name}' -> {ip}:{port}")
 
     @classmethod
-    def list(cls):
+    def list(cls) -> None:
         configs = cls._read()
         if not configs:
             print("No saved configs. Use 'proxy save <name> <ip> <port>'")
@@ -40,12 +43,12 @@ class ProxyConfigStore:
             print(f"  {name}:  {cfg['ip']}:{cfg['port']}")
 
     @classmethod
-    def get(cls, name):
+    def get(cls, name: str) -> Optional[dict[str, str]]:
         configs = cls._read()
         return configs.get(name)
 
     @classmethod
-    def delete(cls, name):
+    def delete(cls, name: str) -> bool:
         configs = cls._read()
         if name not in configs:
             print(f"Config '{name}' not found")
@@ -61,20 +64,20 @@ class ProxyManager:
     Manages system, terminal (zsh), npm and git proxy settings on macOS.
     Supports enabling and disabling proxies across all layers.
     """
-    SERVICE = "Wi-Fi"
+    SERVICE: str = "Wi-Fi"
 
-    def __init__(self, ip=None, port=None):
-        self.ip = ip
-        self.port = port
-        self.system = platform.system()
+    def __init__(self, ip: Optional[str] = None, port: Optional[str] = None) -> None:
+        self.ip: Optional[str] = ip
+        self.port: Optional[str] = port
+        self.system: str = platform.system()
 
-    def _is_darwin(self):
+    def _is_darwin(self) -> bool:
         return self.system == "Darwin"
 
-    def run(self, cmd, shell=True, check=True):
+    def run(self, cmd: str, shell: bool = True, check: bool = True) -> None:
         subprocess.run(cmd, shell=shell, check=check)
 
-    def set_system_proxy(self):
+    def set_system_proxy(self) -> None:
         """Configure macOS system proxy via networksetup (Wi-Fi service)."""
         if not self._is_darwin():
             raise RuntimeError(f"system proxy is only supported on macOS (current: {self.system})")
@@ -83,11 +86,11 @@ class ProxyManager:
         self.run(f'networksetup -setwebproxystate "{self.SERVICE}" on')
         self.run(f'networksetup -setsecurewebproxystate "{self.SERVICE}" on')
 
-    def run_zsh(self, cmd):
+    def run_zsh(self, cmd: str) -> None:
         """Run a command in zsh to properly source ~/.zshrc."""
         print(f"zsh -c '{cmd}'")
 
-    def set_terminal_proxy(self):
+    def set_terminal_proxy(self) -> None:
         """
         Write proxy export lines to ~/.zshrc inside markers for easy tracking.
         Returns the source command to apply to the current shell.
@@ -98,7 +101,7 @@ class ProxyManager:
         marker_start = "# >>> proxy setup >>>"
         marker_end = "# <<< proxy setup <<<"
 
-        lines = []
+        lines: list[str] = []
         skip_block = False
 
         if os.path.exists(zshrc):
@@ -131,17 +134,17 @@ class ProxyManager:
 
         print(f"source {zshrc}")
 
-    def set_npm_proxy(self):
+    def set_npm_proxy(self) -> None:
         """Configure npm to use the proxy via npm config."""
         proxy_url = f"http://{self.ip}:{self.port}"
         self.run(f'npm config set proxy {proxy_url}')
         self.run(f'npm config set https-proxy {proxy_url}')
 
-    def clear_zshrc_proxy(self):
+    def clear_zshrc_proxy(self) -> None:
         """Remove all proxy export lines from ~/.zshrc."""
         zshrc = os.path.expanduser("~/.zshrc")
         if os.path.exists(zshrc):
-            lines = []
+            lines: list[str] = []
             with open(zshrc, "r") as f:
                 for line in f:
                     # Preserve lines that aren't proxy exports
@@ -158,30 +161,30 @@ class ProxyManager:
         # Note: proxy vars remain set in the current shell session.
         # Open a new terminal or manually run: unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
 
-    def disable_system_proxy(self):
+    def disable_system_proxy(self) -> None:
         """Disable macOS system proxy via networksetup."""
         if not self._is_darwin():
             raise RuntimeError(f"system proxy is only supported on macOS (current: {self.system})")
         self.run(f'networksetup -setwebproxystate "{self.SERVICE}" off')
         self.run(f'networksetup -setsecurewebproxystate "{self.SERVICE}" off')
 
-    def set_git_proxy(self):
+    def set_git_proxy(self) -> None:
         """Configure Git global proxy via git config."""
         proxy_url = f"http://{self.ip}:{self.port}"
         self.run(f'git config --global http.proxy {proxy_url}')
         self.run(f'git config --global https.proxy {proxy_url}')
 
-    def clear_git_proxy(self):
+    def clear_git_proxy(self) -> None:
         """Remove Git global proxy configuration."""
         self.run("git config --global --unset http.proxy")
         self.run("git config --global --unset https.proxy")
 
-    def disable_npm_proxy(self):
+    def disable_npm_proxy(self) -> None:
         """Remove npm proxy configuration."""
         self.run("npm config delete proxy")
         self.run("npm config delete https-proxy")
 
-    def enable(self):
+    def enable(self) -> None:
         """Enable proxy across all layers (system, terminal, npm, git)."""
         if not self.ip or not self.port:
             raise ValueError("--ip and --port are required to enable proxy")
@@ -191,11 +194,11 @@ class ProxyManager:
         self.set_git_proxy()
         self.run_zsh("source ~/.zshrc")
         self.print_message('proxy is set successfully!')
-    
-    def print_message(self, message: str):
+
+    def print_message(self, message: str) -> None:
         print(f"echo '{message}'")
 
-    def disable(self):
+    def disable(self) -> None:
         """Disable proxy across all layers (system, terminal, npm, git)."""
         self.disable_system_proxy()
         self.clear_zshrc_proxy()
@@ -205,10 +208,10 @@ class ProxyManager:
         self.run_zsh("source ~/.zshrc")
         self.print_message('proxy has been removed!')
 
-    def unset_proxy_env_variables(self):
+    def unset_proxy_env_variables(self) -> None:
         print(f'unset all_proxy ALL_PROXY http_proxy https_proxy')
-    
-    def status(self):
+
+    def status(self) -> None:
         """Print current proxy status for all layers."""
         print("Proxy Status:")
         print("-" * 40)
@@ -225,7 +228,8 @@ class ProxyManager:
                     capture_output=True, text=True
                 )
                 web_on = "Yes" in web.stdout
-                print(f"  System proxy:  {'enabled' if web_on else 'disabled'}")
+                secure_on = "Yes" in secure.stdout
+                print(f"  System proxy:  {'enabled' if web_on and secure_on else 'disabled'}")
             except Exception as e:
                 print(f"  System proxy:  error ({e})")
         else:
@@ -303,7 +307,7 @@ class ProxyManager:
             print("  Proxy IP:       (unavailable)")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Manage system, terminal (zsh), npm and git proxy settings on macOS.",
         epilog="""
@@ -349,7 +353,7 @@ Configs are stored in ~/.proxy_configs.json
     parser.add_argument("--del", metavar="NAME", dest="delete_name", help="Delete a saved proxy config")
     parser.add_argument("--use", metavar="NAME", help="Load a saved config and enable proxy with it")
     parser.add_argument("--install", action="store_true", help="Install proxy function to ~/.zshrc")
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     # Handle config management commands
     if args.list:
@@ -367,7 +371,7 @@ Configs are stored in ~/.proxy_configs.json
         ProxyConfigStore.save(args.save, args.ip, args.port)
         return
 
-    # --use <name> loads a saved config and enables proxy with it
+    # --use <name> loads a saved config and enabling proxy with it
     if args.use:
         cfg = ProxyConfigStore.get(args.use)
         if not cfg:
@@ -428,7 +432,7 @@ proxy() {{
 # <<< proxy function <<<
 '''
         # Remove old install block if exists
-        lines = []
+        lines: list[str] = []
         skip = False
         if os.path.exists(zshrc):
             with open(zshrc, "r") as f:
