@@ -85,7 +85,7 @@ class ProxyManager:
 
     def run_zsh(self, cmd):
         """Run a command in zsh to properly source ~/.zshrc."""
-        self.run(f"zsh -c '{cmd}'")
+        print(f"zsh -c '{cmd}'")
 
     def set_terminal_proxy(self):
         """
@@ -129,7 +129,7 @@ class ProxyManager:
             f.write(f"export {https_var}\n")
             f.write(f"{marker_end}\n")
 
-        return f"source {zshrc} && echo 'proxy is set!'"
+        print(f"source {zshrc}")
 
     def set_npm_proxy(self):
         """Configure npm to use the proxy via npm config."""
@@ -190,6 +190,10 @@ class ProxyManager:
         self.set_npm_proxy()
         self.set_git_proxy()
         self.run_zsh("source ~/.zshrc")
+        self.print_message('proxy is set successfully!')
+    
+    def print_message(self, message: str):
+        print(f"echo '{message}'")
 
     def disable(self):
         """Disable proxy across all layers (system, terminal, npm, git)."""
@@ -197,8 +201,13 @@ class ProxyManager:
         self.clear_zshrc_proxy()
         self.disable_npm_proxy()
         self.clear_git_proxy()
+        self.unset_proxy_env_variables()
         self.run_zsh("source ~/.zshrc")
+        self.print_message('proxy has been removed!')
 
+    def unset_proxy_env_variables(self):
+        print(f'unset all_proxy ALL_PROXY http_proxy https_proxy')
+    
     def status(self):
         """Print current proxy status for all layers."""
         print("Proxy Status:")
