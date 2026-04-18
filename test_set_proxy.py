@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
@@ -21,7 +21,8 @@ class TestProxyManagerEnableDisable(unittest.TestCase):
         mock_run.assert_any_call('networksetup -setsecurewebproxystate "Wi-Fi" on')
         mock_run.assert_any_call('npm config set proxy http://192.168.1.1:8080')
         mock_run.assert_any_call('npm config set https-proxy http://192.168.1.1:8080')
-        mock_run.assert_any_call("zsh -c 'source ~/.zshrc'")
+        mock_run.assert_any_call('git config --global http.proxy http://192.168.1.1:8080')
+        mock_run.assert_any_call('git config --global https.proxy http://192.168.1.1:8080')
 
     @patch.object(ProxyManager, "run")
     def test_disable_calls_all_subsystems(self, mock_run):
@@ -31,7 +32,8 @@ class TestProxyManagerEnableDisable(unittest.TestCase):
         mock_run.assert_any_call('networksetup -setsecurewebproxystate "Wi-Fi" off')
         mock_run.assert_any_call("npm config delete proxy")
         mock_run.assert_any_call("npm config delete https-proxy")
-        mock_run.assert_any_call("zsh -c 'source ~/.zshrc'")
+        mock_run.assert_any_call("git config --global --unset http.proxy")
+        mock_run.assert_any_call("git config --global --unset https.proxy")
 
     def test_enable_raises_when_ip_missing(self):
         pm = ProxyManager(ip=None, port="8080")
