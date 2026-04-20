@@ -176,13 +176,13 @@ class ProxyManager:
 
     def clear_git_proxy(self) -> None:
         """Remove Git global proxy configuration."""
-        self.run("git config --global --unset http.proxy")
-        self.run("git config --global --unset https.proxy")
+        self.run("git config --global --unset http.proxy", check=False)
+        self.run("git config --global --unset https.proxy", check=False)
 
     def disable_npm_proxy(self) -> None:
         """Remove npm proxy configuration."""
-        self.run("npm config delete proxy")
-        self.run("npm config delete https-proxy")
+        self.run("npm config delete proxy", check=False)
+        self.run("npm config delete https-proxy", check=False)
 
     def enable(self) -> None:
         """Enable proxy across all layers (system, terminal, npm, git)."""
