@@ -30,10 +30,10 @@ class TestProxyManagerEnableDisable(unittest.TestCase):
         pm.disable()
         mock_run.assert_any_call('networksetup -setwebproxystate "Wi-Fi" off')
         mock_run.assert_any_call('networksetup -setsecurewebproxystate "Wi-Fi" off')
-        mock_run.assert_any_call("npm config delete proxy")
-        mock_run.assert_any_call("npm config delete https-proxy")
-        mock_run.assert_any_call("git config --global --unset http.proxy")
-        mock_run.assert_any_call("git config --global --unset https.proxy")
+        mock_run.assert_any_call("npm config delete proxy", check=False)
+        mock_run.assert_any_call("npm config delete https-proxy", check=False)
+        mock_run.assert_any_call("git config --global --unset http.proxy", check=False)
+        mock_run.assert_any_call("git config --global --unset https.proxy", check=False)
 
     def test_enable_raises_when_ip_missing(self):
         pm = ProxyManager(ip=None, port="8080")
@@ -189,8 +189,8 @@ class TestNpmProxy(unittest.TestCase):
     def test_disable_npm_proxy(self, mock_run):
         pm = ProxyManager(ip="10.0.0.1", port="3128")
         pm.disable_npm_proxy()
-        mock_run.assert_any_call("npm config delete proxy")
-        mock_run.assert_any_call("npm config delete https-proxy")
+        mock_run.assert_any_call("npm config delete proxy", check=False)
+        mock_run.assert_any_call("npm config delete https-proxy", check=False)
 
 
 if __name__ == "__main__":

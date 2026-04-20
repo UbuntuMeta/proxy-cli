@@ -176,13 +176,13 @@ class ProxyManager:
 
     def clear_git_proxy(self) -> None:
         """Remove Git global proxy configuration."""
-        self.run("git config --global --unset http.proxy")
-        self.run("git config --global --unset https.proxy")
+        self.run("git config --global --unset http.proxy", check=False)
+        self.run("git config --global --unset https.proxy", check=False)
 
     def disable_npm_proxy(self) -> None:
         """Remove npm proxy configuration."""
-        self.run("npm config delete proxy")
-        self.run("npm config delete https-proxy")
+        self.run("npm config delete proxy", check=False)
+        self.run("npm config delete https-proxy", check=False)
 
     def enable(self) -> None:
         """Enable proxy across all layers (system, terminal, npm, git)."""
@@ -306,6 +306,18 @@ class ProxyManager:
         except Exception:
             print("  Proxy IP:       (unavailable)")
 
+    def whitelist(self) -> None:
+        """Print NO_PROXY / no_proxy environment variables."""
+        print("Proxy Whitelist (NO_PROXY / no_proxy):")
+        print("-" * 40)
+        no_proxy = os.environ.get("no_proxy", "")
+        NO_PROXY = os.environ.get("NO_PROXY", "")
+        if no_proxy or NO_PROXY:
+            print(f"  no_proxy:  {no_proxy}")
+            print(f"  NO_PROXY:  {NO_PROXY}")
+        else:
+            print("  No whitelist configured")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -320,6 +332,7 @@ Usage:
   proxy on <name>        - Enable proxy using a saved config
   proxy off              - Disable proxy
   proxy status           - Show proxy status
+  proxy whitelist        - Show NO_PROXY / no_proxy whitelist
   proxy save <name> <ip> <port>  - Save a named config
   proxy list             - List saved configs
   proxy del <name>       - Delete a saved config
@@ -353,6 +366,7 @@ Configs are stored in ~/.proxy_configs.json
     parser.add_argument("--del", metavar="NAME", dest="delete_name", help="Delete a saved proxy config")
     parser.add_argument("--use", metavar="NAME", help="Load a saved config and enable proxy with it")
     parser.add_argument("--install", action="store_true", help="Install proxy function to ~/.zshrc")
+    parser.add_argument("--whitelist", action="store_true", help="Show NO_PROXY / no_proxy whitelist")
     args: argparse.Namespace = parser.parse_args()
 
     # Handle config management commands
@@ -424,8 +438,11 @@ proxy() {{
       fi
       python {script_path} --del "$2"
       ;;
+    whitelist)
+      python {script_path} --whitelist
+      ;;
     *)
-      echo "Usage: proxy <on|off|status|save|list|del> [args]"
+      echo "Usage: proxy <on|off|status|save|list|del|whitelist> [args]"
       ;;
   esac
 }}
@@ -458,6 +475,11 @@ proxy() {{
     if args.status:
         manager = ProxyManager()
         manager.status()
+        return
+
+    if args.whitelist:
+        manager = ProxyManager()
+        manager.whitelist()
         return
 
     manager = ProxyManager(ip=args.ip, port=args.port)
